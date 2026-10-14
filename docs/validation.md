@@ -8,8 +8,8 @@ Validasi dilakukan pada 14 Oktober 2026 untuk branch `refactor/client-side-rewor
 | ESLint                                           | Lolos tanpa warning                                                 |
 | Prettier                                         | Lolos                                                               |
 | Unit/component regression tests                  | 50 test lolos, 11 file; tidak ada skipped test                      |
-| Playwright development                           | 28 test lolos, desktop dan mobile                                   |
-| Playwright image produksi Nginx                  | 28 test lolos, desktop dan mobile                                   |
+| Playwright development                           | 30 test lolos, desktop dan mobile                                   |
+| Playwright image produksi Nginx                  | 30 test lolos, desktop dan mobile                                   |
 | Axe WCAG pada login, dashboard, dialog transaksi | Lolos di desktop/mobile; 0 violation pada cakupan tersebut          |
 | Vite production build                            | Lolos                                                               |
 | `npm audit`                                      | 0 temuan, dibandingkan 55 temuan pada baseline                      |
@@ -20,6 +20,8 @@ Validasi dilakukan pada 14 Oktober 2026 untuk branch `refactor/client-side-rewor
 | Whitespace diff                                  | Lolos                                                               |
 
 Pengujian browser mencakup login/OTP, reset password, masking saldo, navigasi/deep links, semua produk nasabah, daftar/detail admin, batas izin UI approval, error API, transaksi, CSV, validasi edit split bill, kegagalan pembayaran tanpa perubahan optimistis, dan PDF dengan nama peserta/tagihan sebenarnya dari fixture.
+
+Container akhir berstatus `healthy`; favicon mengembalikan HTTP 200 dengan body PNG. Probe localhost mengabaikan proxy, dan aset statis dimiliki user Nginx agar permission checkout tidak menyebabkan HTTP 403. Runner development dan produksi memakai direktori artefak terpisah.
 
 ## Ukuran bundle
 

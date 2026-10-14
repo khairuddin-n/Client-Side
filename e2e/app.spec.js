@@ -2,6 +2,15 @@ import { expect, test } from '@playwright/test';
 import { accounts, bill, customerApi, session, tokenFor } from './helpers.js';
 import { readFile } from 'node:fs/promises';
 
+test('public favicon is served as a readable PNG', async ({ request }) => {
+  const response = await request.get('/wandoor.png');
+  expect(response.status()).toBe(200);
+  expect(response.headers()['content-type']).toContain('image/png');
+  expect((await response.body()).subarray(0, 8)).toEqual(
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+  );
+});
+
 test('login uses real server errors and remains responsive', async ({
   page,
 }) => {

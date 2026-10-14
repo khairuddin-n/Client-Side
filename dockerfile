@@ -9,8 +9,8 @@ RUN npm run build
 
 FROM nginx:stable-alpine
 ENV API_UPSTREAM=http://127.0.0.1:8081
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build --chown=nginx:nginx /app/dist /usr/share/nginx/html
 COPY deployment/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY deployment/security-headers.conf /etc/nginx/security-headers.conf
 EXPOSE 80
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s CMD wget -q -O /dev/null http://127.0.0.1/healthz || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s CMD wget -Y off -q -O /dev/null http://127.0.0.1/healthz || exit 1
