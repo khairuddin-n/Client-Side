@@ -1,68 +1,25 @@
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-});
+import { api } from '@/shared/api/http.js';
 
 export async function fetchAllCards() {
-  try {
-    const token = sessionStorage.getItem("token");
-
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
-    const res = await api.post("/api/v1/account", {}, {
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      }
-    });
-
-    const result = res?.data?.data;
-
-    return result;
-
-  } catch (error) {
-    console.error("Failed to fetch cards:", error);
-    throw error;
-  }
-}
-
-export async function fetchTransactionHistory({ month, year, accountNumber }) {
-  try {
-    const payload = {
-      month,
-      year,
-      accountNumber,
-      productType: "SVG"
-    };
-
-    const token = sessionStorage.getItem("token");
-
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
-    const resp = await api.post("/api/v1/trx-history", payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      },
-    });
-
-    const trx = resp?.data?.transaction;
-
-    if (!Array.isArray(trx)) {
-      return { transactions: [] };
-    }
-
-    return { transactions: trx };
-
-  } catch (error) {
-    console.error("Failed to fetch transaction history:", error?.message);
-    return { transactions: [] };
-  }
+  const { data } = await api.post('/api/v1/savings', {});
+  if (!Array.isArray(data?.accountList))
+    throw new Error('Respons rekening tidak valid.');
+  return data.accountList.map((card) => ({
+    ...card,
+    account_id: card.account_id ?? card.accountId,
+    type:
+      card.type ??
+      card.product_name ??
+      card.productName ??
+      card.accountProductName ??
+      'Tabungan',
+    account_number: card.account_number ?? card.accountNumber,
+    account_holder_name:
+      card.account_holder_name ?? card.account_name ?? card.accountName,
+    effective_balance:
+      card.effective_balance ??
+      card.effective_balance_total ??
+      card.effectiveBalance ??
+      0,
+  }));
 }

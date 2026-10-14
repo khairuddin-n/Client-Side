@@ -1,168 +1,97 @@
-import React, { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import "../styles/auth-forgot.css";
-import logo from "../../../assets/images/wandoor-logo-2.png";
-import Swal from "sweetalert2";
-import { postForgotPasswordReset } from "../api/authService";
+import { useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import AuthLayout from '@/features/auth/components/AuthLayout.jsx';
+import PasswordField from '@/features/auth/components/PasswordField.jsx';
+import { postForgotPasswordReset } from '@/features/auth/api/auth.api.js';
+import { useAsyncAction } from '@/shared/hooks/useAsyncAction.js';
 
 export default function ForgotPasswordReset() {
-    const { state } = useLocation();
-    const navigate = useNavigate();
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [loading, setLoading] = useState(false);
-
-    const [showNewPassword, setShowNewPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-    const validations = {
-        minLength: newPassword.length >= 8,
-        mixedCase: /[a-z]/.test(newPassword) && /[A-Z]/.test(newPassword),
-        hasNumber: /\d/.test(newPassword),
-        hasSpecial: /[@$!%*?&]/.test(newPassword),
-    };
-
-    const isMatch = newPassword === confirmPassword;
-    const shouldShowMatchMessage = confirmPassword.length > 0;
-
-    const handleReset = async (e) => {
-        e.preventDefault();
-        
-        const allValid = Object.values(validations).every(Boolean);
-
-        if (!newPassword || !confirmPassword) {
-            return Swal.fire({
-                icon: "warning",
-                title: "Incomplete Fields",
-                text: "Please fill both password fields",
-            });
-        }
-
-        if (!allValid) {
-            return Swal.fire({
-                icon: "warning",
-                title: "Weak Password",
-                text: "Please ensure your password meets all requirements.",
-            });
-        }
-
-        if (!isMatch) {
-             return Swal.fire({
-                icon: "error",
-                title: "Password Mismatch",
-                text: "New password and confirmation do not match.",
-            });
-        }
-
-        setLoading(true);
-        try {
-            const res = await postForgotPasswordReset({
-                verifiedSession: sessionStorage.getItem('fp_verified'),
-                newPassword,
-                confirmPassword,
-            });
-
-            if (res.ok && res.data.status) {
-                Swal.fire({
-                    icon: "success",
-                    title: "Password Updated",
-                    text: res.data.message,
-                    confirmButtonColor: "#00bfa6",
-                }).then(() => {
-                    navigate("/login");
-                });
-            } else {
-                Swal.fire({
-                    icon: "error",
-                    title: "Failed",
-                    text: res.message || "Failed to update password",
-                });
-            }
-        } catch (err) {
-            Swal.fire({
-                icon: "error",
-                title: "Error",
-                text: err.message || "Server error occured",
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="auth-background">
-            <div className="reset-box fade-in">
-                <img src={logo} alt="Wandoor Logo" className="logo-img" />
-                <h3>Create A New Password</h3>
-
-                <ul className="password-rules">
-                    <li className={validations.minLength ? "valid" : ""}>
-                        <i className={`fas ${validations.minLength ? "fa-check-circle" : "fa-circle"}`}></i>
-                        Min 8 characters
-                    </li>
-                    <li className={validations.mixedCase ? "valid" : ""}>
-                        <i className={`fas ${validations.mixedCase ? "fa-check-circle" : "fa-circle"}`}></i>
-                        At least 1 uppercase and 1 lowercase
-                    </li>
-                    <li className={validations.hasNumber ? "valid" : ""}>
-                        <i className={`fas ${validations.hasNumber ? "fa-check-circle" : "fa-circle"}`}></i>
-                        At least 1 number
-                    </li>
-                    <li className={validations.hasSpecial ? "valid" : ""}>
-                        <i className={`fas ${validations.hasSpecial ? "fa-check-circle" : "fa-circle"}`}></i>
-                        At least 1 special character (@, $, !, %, *, ?, &)
-                    </li>
-                </ul>
-
-                <form onSubmit={handleReset}>
-                    <div className="input-field">
-                        <i className="fas fa-lock"></i>
-                        <input
-                            type={showNewPassword ? "text" : "password"}
-                            placeholder="New Password"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                        />
-                        <i 
-                            className={`fas ${showNewPassword ? "fa-eye" : "fa-eye-slash"} toggle-eye`}
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                        ></i>
-                    </div>
-
-                    <div className="input-field" style={{ marginBottom: shouldShowMatchMessage ? "0.5rem" : "1.25rem" }}>
-                        <i className="fas fa-lock"></i>
-                        <input
-                            type={showConfirmPassword ? "text" : "password"}
-                            placeholder="Confirm New Password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            style={{ borderColor: shouldShowMatchMessage && !isMatch ? "#d9534f" : "" }}
-                        />
-                        <i 
-                            className={`fas ${showConfirmPassword ? "fa-eye" : "fa-eye-slash"} toggle-eye`}
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        ></i>
-                    </div>
-
-                    {shouldShowMatchMessage && (
-                        <div style={{ textAlign: "left", marginBottom: "1rem", paddingLeft: "0.5rem" }}>
-                            {isMatch ? (
-                                <span className="success-text" style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.85rem", marginTop: 0 }}>
-                                    <i className="fas fa-check-circle"></i> Passwords match
-                                </span>
-                            ) : (
-                                <span className="error-text" style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.85rem", marginTop: 0 }}>
-                                    <i className="fas fa-exclamation-circle"></i> Passwords do not match
-                                </span>
-                            )}
-                        </div>
-                    )}
-
-                    <button type="submit" className="login-btn" disabled={loading}>
-                        {loading ? "Saving..." : "Save"}
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [complete, setComplete] = useState(false);
+  const { pending, error, run } = useAsyncAction();
+  const verifiedSession = sessionStorage.getItem('fp_verified');
+  if (!verifiedSession && !complete) return <Navigate to="/forgot" replace />;
+  const rules = [
+    ['Minimal 8 karakter', password.length >= 8],
+    [
+      'Huruf besar dan huruf kecil',
+      /[A-Z]/.test(password) && /[a-z]/.test(password),
+    ],
+    ['Minimal satu angka', /\d/.test(password)],
+    ['Minimal satu simbol (@$!%*?&)', /[@$!%*?&]/.test(password)],
+  ];
+  function submit(event) {
+    event.preventDefault();
+    run(async () => {
+      if (!rules.every(([, valid]) => valid))
+        throw new Error('Password belum memenuhi persyaratan.');
+      if (password !== confirmation)
+        throw new Error('Konfirmasi password tidak sesuai.');
+      const response = await postForgotPasswordReset({
+        verifiedSession,
+        newPassword: password,
+        confirmPassword: confirmation,
+      });
+      if (!response.ok || !response.data?.status)
+        throw new Error(response.message || 'Password belum dapat diperbarui.');
+      ['fp_verified', 'fp_session', 'fp_username_temp'].forEach((key) =>
+        sessionStorage.removeItem(key),
+      );
+      setPassword('');
+      setConfirmation('');
+      setComplete(true);
+    });
+  }
+  return (
+    <AuthLayout
+      title={complete ? 'Password diperbarui' : 'Buat password baru'}
+      description={
+        complete
+          ? 'Gunakan password baru Anda untuk masuk kembali.'
+          : 'Pilih password yang kuat dan belum pernah Anda gunakan.'
+      }
+    >
+      {complete ? (
+        <Link to="/" className="button-primary">
+          Kembali ke login
+        </Link>
+      ) : (
+        <form className="auth-form" onSubmit={submit} aria-busy={pending}>
+          <PasswordField
+            id="new-password"
+            label="Password baru"
+            autoComplete="new-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            disabled={pending}
+            aria-describedby="password-rules"
+          />
+          <ul id="password-rules" className="password-checklist">
+            {rules.map(([label, valid]) => (
+              <li key={label} className={valid ? 'valid' : ''}>
+                {valid ? '✓' : '○'} {label}
+              </li>
+            ))}
+          </ul>
+          <PasswordField
+            id="confirm-password"
+            label="Konfirmasi password"
+            autoComplete="new-password"
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
+            disabled={pending}
+          />
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button type="submit" className="button-primary" disabled={pending}>
+            {pending ? 'Menyimpan…' : 'Simpan password'}
+          </button>
+        </form>
+      )}
+    </AuthLayout>
+  );
 }

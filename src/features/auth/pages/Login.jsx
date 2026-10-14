@@ -1,170 +1,91 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "../styles/auth.css";
-import "../styles/auth-login.css";
-import logo from "../../../assets/images/wandoor-logo-2.png";
-import { postAuthLogin } from "../api/authService";
-import { decodeJwtToken } from "../api/jwtHelper";
-import { fetchMenuAccess } from "../../admin-dashboard/service/adminUsersService";
-
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import AuthLayout from '@/features/auth/components/AuthLayout.jsx';
+import PasswordField from '@/features/auth/components/PasswordField.jsx';
+import { postAuthLogin } from '@/features/auth/api/auth.api.js';
 import {
-	saveMenuAccessToSession,
-	getUserBlockRule,
-	getUserUnblockRule
-} from "../../../utils/menuAccessSession";
+  ADMIN_ROLES,
+  clearSession,
+  saveSession,
+  sessionHome,
+} from '@/features/auth/lib/session.js';
+import { useAsyncAction } from '@/shared/hooks/useAsyncAction.js';
 
 export default function Login() {
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
-	const [loading, setLoading] = useState(false);
-	const [message, setMessage] = useState("");
-	const [showPassword, setShowPassword] = useState(false);
-	const [showModal, setShowModal] = useState(false);
-	const [modalType, setModalType] = useState("error");
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const { pending, error, run } = useAsyncAction();
+  const navigate = useNavigate();
 
-	const navigate = useNavigate();
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    run(async () => {
+      const response = await postAuthLogin({
+        username: username.trim(),
+        password,
+      });
+      if (!response.ok || !response.data?.status)
+        throw new Error(
+          response.message || 'Username atau password tidak sesuai.',
+        );
+      const { role, sessionIdOrToken } = response.data;
+      if (!sessionIdOrToken) throw new Error('Respons sesi tidak valid.');
+      if (role === 'NASABAH') {
+        clearSession();
+        sessionStorage.setItem('sessionID', sessionIdOrToken);
+        navigate('/otpLogin', { replace: true });
+        return;
+      }
+      if (!ADMIN_ROLES.includes(role))
+        throw new Error('Peran sesi tidak valid.');
+      const claims = saveSession(sessionIdOrToken);
+      navigate(sessionHome(claims), { replace: true });
+    });
+  };
 
-	const handleSubmit = async (e) => {
-		e.preventDefault();
-
-		if (!username.trim() || !password.trim()) {
-			setMessage("Please fill in both fields");
-			setModalType("error");
-			setShowModal(true);
-			return;
-		}
-
-		setLoading(true);
-		setMessage("");
-
-		const respLogin = await postAuthLogin({ username, password });
-		setLoading(false);
-
-		if (!respLogin.ok || !respLogin.data?.status) {
-			setMessage(respLogin.message || "Invalid Username or Password");
-			setModalType("error");
-			setShowModal(true);
-			return;
-		}
-
-		const token = respLogin.data.sessionIdOrToken;
-
-		sessionStorage.setItem("sessionID", respLogin.data.sessionIdOrToken);
-		if (respLogin.data.role !== "NASABAH") {
-			sessionStorage.setItem('token', respLogin.data.sessionIdOrToken)
-		}
-
-		setMessage(respLogin.data.message || "Login success");
-		setModalType("success");
-		setShowModal(true);
-
-		setTimeout(async () => {
-			setShowModal(false);
-
-			const apiRole = respLogin.data.role?.toUpperCase();
-			const ADMIN_ROLES = ["ADMIN", "MAKER", "CHECKER", "APPROVER"];
-
-			if (apiRole === "NASABAH") {
-				navigate("/otpLogin", { replace: true });
-				return;
-			}
-
-			if (ADMIN_ROLES.includes(apiRole)) {
-				let decoded = {};
-				try {
-					decoded = decodeJwtToken(token);
-				} catch (err) {
-					console.error("JWT decode error:", err);
-				}
-
-				sessionStorage.setItem("role", apiRole);
-				sessionStorage.setItem("npp", decoded.npp);
-				sessionStorage.setItem("userId", decoded.userId)
-				sessionStorage.setItem("email", decoded.email)
-
-				try {
-					const resp = await fetchMenuAccess();
-
-					saveMenuAccessToSession(resp.data);
-					sessionStorage.setItem("user_block_action_flow", getUserBlockRule()?.action_flow);
-					sessionStorage.setItem("user_block_menu_id", getUserBlockRule()?.menu_id);
-					sessionStorage.setItem("user_unblock_action_flow", getUserUnblockRule()?.action_flow);
-					sessionStorage.setItem("user_unblock_menu_id", getUserUnblockRule()?.menu_id);
-				} catch (err) {
-					console.warn("Failed to load menu access.", err);
-				}
-
-				navigate("/admin/home", { replace: true });
-				return;
-			}
-			navigate("/otpLogin");
-		}, 800);
-	};
-
-	const handleForgotPassword = (e) => {
-		e.preventDefault();
-		navigate("/forgot");
-	};
-
-	return (
-		<div className="auth-background">
-			<div className="login-box fade-in">
-				<div className="logo">
-					<img src={logo} alt="Wandoor Logo" className="logo-img" />
-				</div>
-
-				<p className="login-subtitle">Please login to your account</p>
-
-				<form onSubmit={handleSubmit}>
-					<div className="input-field">
-						<i className="fas fa-user"></i>
-						<input
-							type="text"
-							placeholder="Username"
-							value={username}
-							onChange={(e) => setUsername(e.target.value)}
-						/>
-					</div>
-
-					<div className="input-field">
-						<i className="fas fa-lock"></i>
-						<input
-							type={showPassword ? "text" : "password"}
-							placeholder="Password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-						/>
-						<i
-							className={`far ${showPassword ? "fa-eye-slash" : "fa-eye"} toggle-eye`}
-							onClick={() => setShowPassword(!showPassword)}
-						></i>
-					</div>
-
-					<div className="forgot-password">
-						<a href="#" onClick={handleForgotPassword}>
-							Forgot password?
-						</a>
-					</div>
-
-					<button type="submit" className="login-btn" disabled={loading}>
-						{loading ? "Logging in..." : "Login"}
-					</button>
-				</form>
-			</div>
-
-			{showModal && (
-				<div className="modal-overlay">
-					<div className={`modal-content ${modalType}`}>
-						<h3>{modalType === "success" ? "Login Successful" : "Login Failed"}</h3>
-						<p>{message}</p>
-						{modalType === "error" && (
-							<button onClick={() => setShowModal(false)} className="modal-close-btn">
-								Close
-							</button>
-						)}
-					</div>
-				</div>
-			)}
-		</div>
-	);
+  return (
+    <AuthLayout
+      title="Masuk ke akun Anda"
+      description="Pantau keuangan dan lanjutkan rencana Anda dengan aman."
+    >
+      <form onSubmit={handleSubmit} className="auth-form" aria-busy={pending}>
+        <div className="form-field">
+          <label htmlFor="username">Username</label>
+          <input
+            id="username"
+            name="username"
+            autoComplete="username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            required
+            maxLength={100}
+            placeholder="Masukkan username"
+            disabled={pending}
+          />
+        </div>
+        <PasswordField
+          id="password"
+          label="Password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          disabled={pending}
+          placeholder="Masukkan password"
+        />
+        <Link to="/forgot" className="auth-forgot-link">
+          Lupa password?
+        </Link>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <button type="submit" className="button-primary" disabled={pending}>
+          {pending ? 'Memproses…' : 'Masuk'}
+        </button>
+      </form>
+      <p className="auth-note">
+        Kode OTP hanya dikirim ke email yang terdaftar.
+      </p>
+    </AuthLayout>
+  );
 }

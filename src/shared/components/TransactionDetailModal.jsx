@@ -1,134 +1,49 @@
-import React from "react";
-import { X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import "../styles/components/transaction-detail-modal.css";
-
-import billPaymentIcon from "../../assets/images/bill_payment.png";
-import qrisIcon from "../../assets/images/qris.png";
-import vaIcon from "../../assets/images/va.png";
-import transferIcon from "../../assets/images/transfer.png";
-import ewalletIcon from "../../assets/images/e_wallet.png";
+import { useNavigate } from 'react-router-dom';
+import Dialog from '@/shared/components/Dialog.jsx';
+import { formatCurrency, formatDate } from '@/shared/lib/format.js';
 
 export default function TransactionDetailModal({
   transaction,
   onClose,
   onSplitBill,
-  productType = "SAV",
+  productType = 'SAV',
 }) {
   const navigate = useNavigate();
+  const canSplit = productType === 'SAV' && transaction?.debit_credit === 'D';
   if (!transaction) return null;
-
-  const isExpense =
-    transaction.debit_credit === "D" ||
-    transaction.jenisTransaksi === "Pengeluaran" ||
-    (typeof transaction.amount === "string" && transaction.amount.startsWith("-"));
-
-  const canSplitBill = isExpense && productType === "SAV";
-  const hasSplitBill = transaction.split_bill_id;
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "-";
-    const d = new Date(dateStr);
-    return d.toLocaleString("id-ID", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatAmount = (amount) => {
-    const num =
-      typeof amount === "string"
-        ? Number(amount.replace(/[^\d-]/g, ""))
-        : Number(amount);
-    return `Rp ${Math.abs(num).toLocaleString("id-ID")}`;
-  };
-
-  const getIcon = () => {
-    const t = (transaction.transactionType || "").toLowerCase();
-
-    if (t.includes("qris")) return qrisIcon;
-    if (t.includes("virtual") || t.includes("va")) return vaIcon;
-    if (t.includes("transfer")) return transferIcon;
-    if (t.includes("wallet")) return ewalletIcon;
-    if (t.includes("payment")) return billPaymentIcon;
-
-    return billPaymentIcon;
-  };
-
-  const handleSplit = (e) => {
-    e.stopPropagation();
-    if (hasSplitBill) {
-      navigate(`/splitbill/detail`, {
-        state: { splitBillId: transaction.split_bill_id, color: "#6dddd0" },
-      });
-      onClose();
-    } else {
-      onClose();
-      if (onSplitBill) {
-        onSplitBill(transaction);
-      }
-    }
-  };
-
+  function split() {
+    onClose();
+    if (transaction.split_bill_id)
+      navigate(
+        '/splitbill/detail?bill=' +
+          encodeURIComponent(transaction.split_bill_id),
+      );
+    else onSplitBill?.(transaction);
+  }
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="trxv2-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="trxv2-close" onClick={onClose}>
-          <X size={20} />
+    <Dialog title="Detail transaksi" onClose={onClose}>
+      <strong className="dialog-amount">
+        {formatCurrency(transaction.amount)}
+      </strong>
+      <dl className="detail-list">
+        {[
+          ['ID transaksi', transaction.transactionId],
+          ['Tanggal', formatDate(transaction.transactionDate)],
+          ['Jenis', transaction.type || transaction.transactionType],
+          ['Keterangan', transaction.detail || transaction.partyName],
+          ['Detail penerima', transaction.partyDetail],
+        ].map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value || '—'}</dd>
+          </div>
+        ))}
+      </dl>
+      {canSplit && (transaction.split_bill_id || onSplitBill) && (
+        <button type="button" className="button-primary" onClick={split}>
+          {transaction.split_bill_id ? 'Lihat split bill' : 'Buat split bill'}
         </button>
-
-        <div className="trxv2-icon-wrapper">
-          <div className="trxv2-icon-circle">
-            <img src={getIcon()} className="trxv2-icon" alt="trx-icon" />
-          </div>
-        </div>
-
-        <p className="trxv2-party">
-          {transaction.partyName || transaction.detail || "-"}
-        </p>
-
-        <p className="trxv2-sub">
-          {transaction.transactionId ? `ID: ${transaction.transactionId}` : ""}
-        </p>
-
-        <p
-          className={`trxv2-amount ${
-            isExpense ? "trxv2-expense" : "trxv2-income"
-          }`}
-        >
-          {isExpense ? "-" : "+"} {formatAmount(transaction.amount)}
-        </p>
-
-        {canSplitBill && (
-          <button className="trxv2-split-btn" onClick={handleSplit}>
-            {hasSplitBill ? "View Split Bill" : "Split Bill?"}
-          </button>
-        )}
-
-        <div className="trxv2-divider"></div>
-
-        <p className="trxv2-details-title">Transaction Details</p>
-
-        <div className="trxv2-table">
-          <div className="trxv2-row">
-            <span>Transaction Type</span>
-            <span>{transaction.transactionType || "-"}</span>
-          </div>
-
-          <div className="trxv2-row">
-            <span>Date</span>
-            <span>{formatDate(transaction.transactionDate)}</span>
-          </div>
-
-          <div className="trxv2-row">
-            <span>Description</span>
-            <span>{transaction.partyDetail || "-"}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+      )}
+    </Dialog>
   );
 }

@@ -1,261 +1,75 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import Navbar from "../../../shared/components/Navbar";
-import LifeGoalsCard from "../components/LifeGoalsCard";
-import TransactionDetailModal from "../../../shared/components/TransactionDetailModal";
-import TransactionHistory from "../../../shared/components/TransactionHistory";
-import "../styles/life-goals-detail.css";
+import { useCallback } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
+import PageLayout from '@/shared/components/PageLayout.jsx';
+import PageState from '@/shared/components/PageState.jsx';
+import StatementPanel from '@/shared/components/StatementPanel.jsx';
+import { useAsyncResource } from '@/shared/hooks/useAsyncResource.js';
+import { fetchLifeGoalDetail } from '@/features/life-goals/api/life-goals.api.js';
 import {
-  fetchLifeGoalTransactions,
-  fetchLifeGoalDetail,
-} from "../api/life-goals.api";
-import { ChevronLeft } from "lucide-react";
+  formatDate,
+  formatCurrency,
+  maskAccount,
+} from '@/shared/lib/format.js';
 
-export default function LifeGoalDetail() {
-  const navigate = useNavigate();
+export default function LifeGoalsDetail() {
+  const { id } = useParams();
   const { state } = useLocation();
-  const goal = state?.goal || {};
-  const accountNumber = state?.accountNumber;
-
-  const getLastMonths = () => {
-    const now = new Date();
-    const arr = [];
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      arr.push({
-        label: d.toLocaleString("en-US", { month: "short" }),
-        month: d.getMonth() + 1,
-        year: d.getFullYear(),
-      });
-    }
-    return arr.reverse();
-  };
-
-  const [months] = useState(getLastMonths());
-  const [selectedMonth, setSelectedMonth] = useState(months[months.length - 1]);
-
-  const [transactions, setTransactions] = useState([]);
-  const [goalDetail, setGoalDetail] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
-
-  const mapTransactions = (txData) => {
-    if (!Array.isArray(txData)) return [];
-
-    return txData.map(group => ({
-      date: new Date(group.date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }),
-      items: group.items.map((item, idx) => ({
-        transactionId: item.transactionId || `LFG-${idx}`,
-        transactionDate: group.date,
-        type: item.type,
-        transactionType: item.type,
-        detail: item.desc,
-        partyName: item.type,
-        amount: item.amount,
-        debit_credit: String(item.amount).startsWith("-") ? "D" : "C",
-        jenisTransaksi: String(item.amount).startsWith("-") ? "Expense" : "Income",
-      }))
-    }));
-  };
-
-  useEffect(() => {
-    async function loadData() {
-      if (!accountNumber) {
-        setError("Account number not provided");
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const detailRes = await fetchLifeGoalDetail(accountNumber);
-        setGoalDetail(detailRes?.data || null);
-
-        await handleMonthChange(selectedMonth);
-      } catch (err) {
-        console.error("Error loading life goal detail:", err);
-        setError(err.message || "Failed to load life goal details");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, [accountNumber]);
-
-  const handleMonthChange = async (monthObj) => {
-    setSelectedMonth(monthObj);
-    setLoading(true);
-    try {
-      const txRes = await fetchLifeGoalTransactions(
-        accountNumber,
-        monthObj.month,
-        monthObj.year,
-      );
-      setTransactions(mapTransactions(txRes));
-    } catch (err) {
-      console.error("Error loading transactions:", err);
-      setTransactions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading && !goalDetail) return <div className="loading" style={{ textAlign: 'center', padding: '3rem' }}>Loading...</div>;
-
-  if (error) {
-    return (
-      <div className="lg-container">
-        <Navbar />
-        <main className="lg-main" style={{ textAlign: 'center', padding: '3rem' }}>
-          <h2>Unable to Load Life Goal</h2>
-          <p style={{ color: "#777", margin: "1rem 0" }}>{error}</p>
-          <button onClick={() => navigate(-1)}>Go Back</button>
-        </main>
-      </div>
-    );
-  }
-
-  if (!goalDetail) return <div className="loading" style={{ textAlign: 'center', padding: '3rem' }}>No data available</div>;
-
-  const toDate = (str) => {
-    if (!str) return "";
-    const d = new Date(str);
-    if (isNaN(d.getTime())) return str;
-    return d;
-  };
-
-  const handleMouseMove = (e) => {
-    const button = e.currentTarget;
-    const rect = button.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    button.style.setProperty("--x", `${x}px`);
-    button.style.setProperty("--y", `${y}px`);
-  };
-
+  const load = useCallback(
+    async () => (await fetchLifeGoalDetail(id)).data,
+    [id],
+  );
+  const { data, loading, error, refetch } = useAsyncResource(load);
   return (
-    <div
-      className="lg-container"
-      style={{
-        "--theme": goal.color || "#6dddd0",
-        "--accent-gradient": `linear-gradient(135deg, ${goal.color || "#6dddd0"
-          } 0%, #ffffff 100%)`,
-      }}
+    <PageLayout
+      title={state?.goal?.lifegoalsTitle || 'Detail life goal'}
+      description="Lihat perkembangan simpanan dan detail rencana Anda."
+      actions={
+        <Link to="/lifegoals" className="button-secondary">
+          ← Semua tujuan
+        </Link>
+      }
     >
-      <Navbar />
-      <main className="lg-main">
-        <header className="lg-header">
-          <button
-            className="lg-back shimmer"
-            onClick={() => navigate(-1)}
-            onMouseMove={handleMouseMove}
-          >
-            <ChevronLeft size={24} className="back-icon" />
-            Back to Life Goals
-          </button>
-        </header>
-
-        <div className="lg-grid">
-          <section className="left-column">
-            <LifeGoalsCard
-              goal={{
-                title: goal.title,
-                lifegoalsSubtitle: goal.desc,
-                current: goal.current,
-                target: goal.target,
-                color: goal.color,
-              }}
-              onClick={() => { }}
-            />
-
-            <div className="history-panel glass-card">
-              <TransactionHistory
-                transactions={transactions}
-                months={months}
-                selectedMonth={selectedMonth}
-                onMonthChange={handleMonthChange}
-                themeColor={goal.color || "#71d9d0"}
-                title="Transaction History"
-                loading={loading}
-                onTransactionClick={(item) => {
-                  setSelectedTransaction(item);
-                  setShowDetailModal(true);
-                }}
-                productType="LFG"
-                emptyMessage="No transactions available"
-              />
-            </div>
-          </section>
-
-          <aside className="info-column glass-card">
-            <div className="lg-info-grid">
-              <h3 className="info-title">Life Goal Details</h3>
-              <div className="divider" />
-              <div className="lg-label">Account Number</div>
-              <div className="lg-value">{goalDetail.accountNumber}</div>
-
-              <div className="lg-label">Estimated Accumulated Funds</div>
-              <div className="lg-value">
-                Rp
-                {Number(goalDetail.estimatedAccumulatedBalance || 0).toLocaleString("id-ID")}
-              </div>
-
-              <div className="lg-label">Initial Deposit</div>
-              <div className="lg-value">
-                Rp
-                {Number(goalDetail.initalDeposit || 0).toLocaleString("id-ID")}
-              </div>
-
-              <div className="lg-label">Annual Interest Rate</div>
-              <div className="lg-value">
-                {(Number(goalDetail.interestRate || 0) * 100).toFixed(2).replace(/\.00$/, "")}%
-              </div>
-
-              <div className="lg-label">Duration</div>
-              <div className="lg-value">{goalDetail.lifegoalsDuration} years</div>
-
-              <div className="lg-label">Created On</div>
-              <div className="lg-value">
-                {(() => {
-                  const d = toDate(goalDetail.createdTime);
-                  return d instanceof Date ? d.toLocaleDateString("en-US", { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
-                })()}
-              </div>
-
-              <h3 className="info-title">Disbursement Details</h3>
-              <div className="divider" />
-
-              <div className="lg-label">Maturity Date</div>
-              <div className="lg-value">
-                {(() => {
-                  const d = toDate(goalDetail.maturityDate);
-                  return d instanceof Date ? d.toLocaleDateString("en-US", { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
-                })()}
-              </div>
-
-              <div className="lg-label">Disbursement Account</div>
-              <div className="lg-value">
-                {goalDetail.disbursementAccountNumber}
-              </div>
-            </div>
-          </aside>
-        </div>
-      </main>
-
-      {showDetailModal && selectedTransaction && (
-        <TransactionDetailModal
-          transaction={selectedTransaction}
-          onClose={() => {
-            setShowDetailModal(false);
-            setSelectedTransaction(null);
-          }}
-          productType="LFG"
+      {loading ? (
+        <PageState loading />
+      ) : error ? (
+        <PageState
+          title="Detail belum dapat dimuat"
+          message={error}
+          onRetry={refetch}
         />
+      ) : (
+        <>
+          <section className="content-panel" style={{ marginBottom: '1.5rem' }}>
+            <h2>Informasi rencana</h2>
+            <dl className="detail-list">
+              {[
+                ['Rekening', maskAccount(data.accountNumber)],
+                [
+                  'Estimasi akumulasi',
+                  formatCurrency(data.estimatedAccumulateBalance),
+                ],
+                ['Setoran awal', formatCurrency(data.initialDeposit)],
+                ['Suku bunga', `${data.interestRate ?? 0}%`],
+                ['Durasi', `${data.lifegoalsDuration ?? 0} bulan`],
+                ['Jatuh tempo', formatDate(data.maturityDate)],
+                [
+                  'Rekening pencairan',
+                  maskAccount(
+                    data.disbursmentAccountNumber ??
+                      data.disbursementAccountNumber,
+                  ),
+                ],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+          <StatementPanel accountNumber={id} productType="LFG" />
+        </>
       )}
-    </div>
+    </PageLayout>
   );
 }

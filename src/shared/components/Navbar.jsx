@@ -1,59 +1,76 @@
-import React, { useState, useRef, useEffect } from "react";
-import { usePageLoader } from "../hooks/usePageLoader";
-import "../styles/components/navbar.css";
-import NotificationPanel from "./NotificationPanel";
-import logo from "../../assets/images/wandoor-logo-2.png";
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import { Bell, UserRound } from 'lucide-react';
+import logo from '@/assets/images/wandoor-logo-2.png';
+import NotificationPanel from '@/shared/components/NotificationPanel.jsx';
+import '@/shared/styles/components/navbar.css';
+
+const items = [
+  { path: '/dashboard', label: 'Beranda' },
+  { path: '/detailmycard', label: 'Rekening' },
+  { path: '/lifegoals', label: 'Tujuan' },
+  { path: '/splitbill', label: 'Split bill' },
+];
 
 export default function Navbar({ title }) {
-  const navigate = usePageLoader();
-  const [showNotif, setShowNotif] = useState(false);
-  const bellRef = useRef(null);
-
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationRef = useRef(null);
   useEffect(() => {
-    if (!showNotif) return;
-
-    function handleOutside(e) {
-      if (bellRef.current?.contains(e.target)) return;
-      if (document.querySelector(".notif-panel")?.contains(e.target)) return;
-      setShowNotif(false);
+    if (!notificationsOpen) return;
+    function outside(event) {
+      if (!notificationRef.current?.contains(event.target))
+        setNotificationsOpen(false);
     }
-
-    document.addEventListener("pointerdown", handleOutside);
-    return () => document.removeEventListener("pointerdown", handleOutside);
-  }, [showNotif]);
-
+    function escape(event) {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false);
+        notificationRef.current?.querySelector('button')?.focus();
+      }
+    }
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [notificationsOpen]);
   return (
-    <>
-      <nav className="navbar-container">
-        <div className="navbar-content">
-          <div className="navbar-left" onClick={() => navigate("/dashboard")}>
-            <img src={logo} alt="Wandoor Logo" className="navbar-logo-img" />
+    <header className="navbar-container">
+      <div className="navbar-content">
+        <Link
+          to="/dashboard"
+          className="navbar-left"
+          aria-label="Wandoor — beranda"
+        >
+          <img src={logo} alt="Wandoor" className="navbar-logo-img" />
+        </Link>
+        <nav className="navbar-links" aria-label="Navigasi utama">
+          {items.map((item) => (
+            <NavLink key={item.path} to={item.path}>
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="navbar-right">
+          {title && <span className="navbar-section">{title}</span>}
+          <div className="notification-anchor" ref={notificationRef}>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Notifikasi"
+              aria-expanded={notificationsOpen}
+              aria-controls="notification-panel"
+              onClick={() => setNotificationsOpen((value) => !value)}
+            >
+              <Bell size={19} />
+            </button>
+            {notificationsOpen && <NotificationPanel />}
           </div>
-
-          <div className="navbar-center">
-            {title && <h1 className="navbar-title">{title}</h1>}
-          </div>
-
-          <div className="navbar-right">
-            <i
-              ref={bellRef}
-              className="fas fa-bell nav-icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.nativeEvent.stopImmediatePropagation();
-                setShowNotif((prev) => !prev);
-              }}
-            ></i>
-
-            <i
-              className="fas fa-user-circle nav-icon"
-              onClick={() => navigate("/profile")}
-            ></i>
-          </div>
+          <Link to="/profile" className="icon-button" aria-label="Profil akun">
+            <UserRound size={19} />
+          </Link>
         </div>
-      </nav>
-
-      {showNotif && <NotificationPanel visible={showNotif} anchorRef={bellRef} />}
-    </>
+      </div>
+    </header>
   );
 }

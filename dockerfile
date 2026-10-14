@@ -1,30 +1,16 @@
-# Gunakan image Node.js untuk build aplikasi
-FROM node:18-alpine AS build
-
+FROM node:24-alpine AS build
 WORKDIR /app
-
-COPY package*.json ./
-RUN npm install
-
+COPY package.json package-lock.json ./
+RUN --mount=type=secret,id=npm_ca \
+    if [ -f /run/secrets/npm_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/npm_ca; fi; \
+    npm ci --fetch-timeout=30000 --fetch-retries=1
 COPY . .
-RUN npm run build 
+RUN npm run build
 
-# Gunakan Nginx untuk menyajikan hasil build
 FROM nginx:stable-alpine
-
-# Salin hasil build React ke folder default Nginx
+ENV API_UPSTREAM=http://127.0.0.1:8081
 COPY --from=build /app/dist /usr/share/nginx/html
-
-# Buat simple nginx config untuk SPA
-RUN echo 'server { \
-    listen 80; \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html; \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
-
+COPY deployment/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY deployment/security-headers.conf /etc/nginx/security-headers.conf
 EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s CMD wget -q -O /dev/null http://127.0.0.1/healthz || exit 1

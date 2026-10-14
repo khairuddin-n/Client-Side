@@ -1,3 +1,2 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import './shared/styles/base/variables.css';
+@import './shared/styles/base/global.css';

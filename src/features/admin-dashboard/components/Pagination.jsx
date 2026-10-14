@@ -1,102 +1,56 @@
-import React from "react";
-import PropTypes from "prop-types";
-import "../styles/pagination.css";
-
 export default function Pagination({
-	currentPage,
-	totalPages,
-	rowsPerPage,
-	onPageChange,
-	onRowsPerPageChange,
-	theme = "teal",
-	maxVisiblePages = 9,
+  currentPage = 1,
+  totalPages = 1,
+  rowsPerPage = 10,
+  onPageChange,
+  onRowsPerPageChange,
+  totalRows,
 }) {
-	const handlePageChange = (page) => {
-		if (page >= 1 && page <= totalPages) {
-			onPageChange(page);
-		}
-	};
-
-	const renderPageNumbers = () => {
-		const pages = [];
-		const halfVisible = Math.floor(maxVisiblePages / 2);
-
-		let startPage = Math.max(1, currentPage - halfVisible);
-		let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-		if (endPage - startPage + 1 < maxVisiblePages) {
-			startPage = Math.max(1, endPage - maxVisiblePages + 1);
-		}
-
-		for (let i = startPage; i <= endPage; i++) {
-			pages.push(
-				<button
-					key={i}
-					className={`pagination-number ${currentPage === i ? "active" : ""}`}
-					onClick={() => handlePageChange(i)}
-				>
-					{i}
-				</button>
-			);
-		}
-
-		if (endPage < totalPages) {
-			pages.push(
-				<span key="ellipsis" className="pagination-dots">
-					…
-				</span>
-			);
-		}
-
-		return pages;
-	};
-
-	return (
-		<div className={`pagination-wrapper theme-${theme}`}>
-			<div className="rows-per-page">
-				<span>Show</span>
-				<select
-					value={rowsPerPage}
-					onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
-					className="rows-select"
-				>
-					<option value={10}>10</option>
-					<option value={25}>25</option>
-					<option value={50}>50</option>
-					<option value={100}>100</option>
-				</select>
-				<span>rows</span>
-			</div>
-
-			<div className="pagination-controls">
-				<button
-					className="pagination-btn"
-					onClick={() => handlePageChange(currentPage - 1)}
-					disabled={currentPage === 1}
-				>
-					Prev
-				</button>
-
-				{renderPageNumbers()}
-
-				<button
-					className="pagination-btn"
-					onClick={() => handlePageChange(currentPage + 1)}
-					disabled={currentPage === totalPages}
-				>
-					Next
-				</button>
-			</div>
-		</div>
-	);
+  const lastPage = Math.max(1, totalPages);
+  const page = Math.min(Math.max(1, currentPage), lastPage);
+  return (
+    <nav className="admin-pagination" aria-label="Navigasi halaman tabel">
+      <div>
+        {onRowsPerPageChange && (
+          <label>
+            Baris per halaman{' '}
+            <select
+              value={rowsPerPage}
+              onChange={(event) =>
+                onRowsPerPageChange(Number(event.target.value))
+              }
+            >
+              {[10, 25, 50, 100].map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {totalRows != null && <span>{totalRows} hasil</span>}
+      </div>
+      <div>
+        <button
+          type="button"
+          className="button-secondary"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          Sebelumnya
+        </button>
+        <span aria-live="polite">
+          {page} / {lastPage}
+        </span>
+        <button
+          type="button"
+          className="button-secondary"
+          disabled={page >= lastPage}
+          onClick={() => onPageChange(page + 1)}
+        >
+          Berikutnya
+        </button>
+      </div>
+    </nav>
+  );
 }
-
-Pagination.propTypes = {
-	currentPage: PropTypes.number.isRequired,
-	totalPages: PropTypes.number.isRequired,
-	rowsPerPage: PropTypes.number.isRequired,
-	onPageChange: PropTypes.func.isRequired,
-	onRowsPerPageChange: PropTypes.func.isRequired,
-	theme: PropTypes.oneOf(["teal", "peach", "purple"]),
-	maxVisiblePages: PropTypes.number,
-};

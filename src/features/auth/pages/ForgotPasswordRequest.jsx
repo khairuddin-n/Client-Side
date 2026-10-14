@@ -1,84 +1,58 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "../styles/auth-forgot.css";
-import logo from "../../../assets/images/wandoor-logo-2.png";
-import Swal from "sweetalert2";
-import { postForgotPasswordRequestOtp } from "../api/authService";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import AuthLayout from '@/features/auth/components/AuthLayout.jsx';
+import { postForgotPasswordRequestOtp } from '@/features/auth/api/auth.api.js';
+import { useAsyncAction } from '@/shared/hooks/useAsyncAction.js';
 
 export default function ForgotPasswordRequest() {
-    const [username, setUsername] = useState("");
-    const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
-
-    const handleSendOtp = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-
-        try {
-            const res = await postForgotPasswordRequestOtp({ username });
-
-            if (res.ok && res.data.status) {
-                Swal.fire({
-                    icon: "success",
-                    title: "OTP Sent!",
-                    text: res.data.message,
-                    confirmButtonColor: "#00bfa6",
-                }).then(() => {
-                    sessionStorage.setItem("fp_session", res.data.sessionId);
-                    navigate("/forgot/otp", { state: { username, sessionId: res.data.sessionId } });
-                });
-            } else {
-                Swal.fire({
-                    icon: "error",
-                    title: "Failed",
-                    text: res.message || "Failed to resend OTP",
-                });
-            }
-        } catch (err) {
-            Swal.fire({
-                icon: "error",
-                title: "Error",
-                text: err.message || "Server error occured",
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleBackToLogin = (e) => {
-        e.preventDefault();
-        navigate("/login");
-    };
-
-    return (
-        <div className="auth-background">
-            <div className="forgot-box fade-in">
-                <img src={logo} alt="Wandoor Logo" className="logo-img" />
-                <p className="login-subtitle">We will send OTP to your registered email</p>
-
-                <form onSubmit={handleSendOtp}>
-                    <div className="input-field">
-                        <i className="fas fa-user"></i>
-                        <input
-                            type="text"
-                            placeholder="Username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            required
-                        />
-                    </div>
-
-                    <button type="submit" className="login-btn" disabled={loading}>
-                        {loading ? "Sending..." : "Send OTP"}
-                    </button>
-                </form>
-
-                <div className="back-to-login">
-                    <a href="#" onClick={handleBackToLogin}>
-                        ← Back to Login
-                    </a>
-                </div>
-            </div>
+  const [username, setUsername] = useState('');
+  const { pending, error, run } = useAsyncAction();
+  const navigate = useNavigate();
+  function submit(event) {
+    event.preventDefault();
+    run(async () => {
+      const response = await postForgotPasswordRequestOtp({
+        username: username.trim(),
+      });
+      if (!response.ok || !response.data?.status || !response.data.sessionId)
+        throw new Error(
+          response.message || 'Permintaan reset belum dapat diproses.',
+        );
+      sessionStorage.removeItem('fp_verified');
+      sessionStorage.setItem('fp_session', response.data.sessionId);
+      sessionStorage.setItem('fp_username_temp', username.trim());
+      navigate('/forgot/otp');
+    });
+  }
+  return (
+    <AuthLayout
+      title="Lupa password?"
+      description="Kami akan mengirim kode verifikasi ke email yang terdaftar."
+    >
+      <form className="auth-form" onSubmit={submit} aria-busy={pending}>
+        <div className="form-field">
+          <label htmlFor="username">Username</label>
+          <input
+            id="username"
+            name="username"
+            autoComplete="username"
+            required
+            maxLength={100}
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            disabled={pending}
+          />
         </div>
-    );
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <button type="submit" className="button-primary" disabled={pending}>
+          {pending ? 'Mengirim…' : 'Kirim kode OTP'}
+        </button>
+        <Link to="/">← Kembali ke login</Link>
+      </form>
+    </AuthLayout>
+  );
 }

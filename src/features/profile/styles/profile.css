@@ -1,515 +1,97 @@
-:root {
-  font-size: 16px;
+.profile-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 116px 32px 48px;
 }
-
-/* ============================
-   GLOBAL PAGE
-============================ */
-.profile-page {
-  font-family: "Poppins", sans-serif;
-  min-height: 100vh;
-  background: linear-gradient(180deg, #fffaf5 0%, #f9fdfc 100%);
-  display: flex;
-  flex-direction: column;
-  padding-top: 6.25rem;
-}
-
-/* ============================
-   MAIN WRAPPER
-============================ */
-.profile-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: clamp(3rem, 5vw, 6rem);
-  padding: clamp(3rem, 6vw, 6rem);
-  color: #2f2f2f;
-  box-sizing: border-box;
-  width: 100%;
-  flex-wrap: wrap;
-}
-
-/* ============================
-   LEFT COLUMN
-============================ */
-.profile-left {
-  background: #fff7f1;
-  border-radius: 1rem;
-  box-shadow: 0 0.4rem 1rem rgba(0, 0, 0, 0.08);
-  padding: clamp(2.5rem, 4vw, 3.5rem) clamp(2.5rem, 5vw, 4rem);
-  flex: 0 0 26rem;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.avatar {
-  width: clamp(7rem, 9vw, 8.5rem);
-  height: clamp(7rem, 9vw, 8.5rem);
-  background-color: #f7b98b;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(3rem, 4vw, 3.5rem);
-  color: #2f2f2f;
+.profile-content header {
   margin-bottom: 2rem;
 }
-
-.user-name {
-  font-size: clamp(1.4rem, 2vw, 1.8rem);
+.profile-content header h1 {
+  font-size: 2rem;
+  margin: 0.5rem 0;
   font-weight: 600;
-  color: #2f2f2f;
-  margin-bottom: 2rem;
 }
-
-.cif-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: #f7b98b;
-  border-radius: 0.75rem;
-  padding: 1rem 1.75rem;
-  width: 90%;
-  box-shadow: 0 0.3rem 0.6rem rgba(0, 0, 0, 0.1);
-  text-align: left;
+.profile-content header p {
+  color: var(--text-gray);
 }
-
-.cif-card i {
-  font-size: 1.5rem;
-  color: #2f2f2f;
-}
-
-.cif-card .label {
-  font-size: 0.9rem;
-  color: #2f2f2f;
-  margin: 0;
-}
-
-.cif-card .value {
-  font-weight: 700;
-  font-size: 1.125rem;
-  color: #2f2f2f;
-  margin-top: 0.125rem;
-}
-
-/* ============================
-   RIGHT COLUMN
-============================ */
-.profile-right {
-  flex: 1;
-  min-width: 30rem;
-}
-
-.section-title {
-  font-size: clamp(1.75rem, 2.5vw, 2rem);
-  font-weight: 700;
-  margin-bottom: 2.5rem;
-  color: #2f2f2f;
-}
-
-.info-grid {
+.profile-layout {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: clamp(1.5rem, 3vw, 2.5rem);
+  grid-template-columns: 1fr 2fr;
+  gap: 1.5rem;
 }
-
-.info-box {
-  display: flex;
-  align-items: center;
-  gap: clamp(1rem, 2vw, 1.5rem);
-  background: #fff7f1;
-  border-radius: 0.75rem;
-  padding: clamp(1.25rem, 2vw, 2rem) clamp(1.75rem, 3vw, 2.25rem);
-  box-shadow: 0 0.4rem 0.75rem rgba(0, 0, 0, 0.05);
+.profile-identity,
+.profile-information {
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: white;
 }
-
-.info-box i {
-  font-size: clamp(1.5rem, 2vw, 1.875rem);
-  color: #f2994a;
-}
-
-.label {
-  font-size: clamp(0.9rem, 1.1vw, 1rem);
-  color: #555;
-  margin: 0;
-}
-
-.value {
-  font-size: clamp(1.125rem, 1.4vw, 1.25rem);
-  font-weight: 600;
-  color: #2f2f2f;
-  margin: 0;
-}
-
-/* ============================
-   BUTTONS
-============================ */
-.bottom-buttons {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 3rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.update-pass-btn,
-.signout-btn,
-.primary-btn,
-.cancel-btn,
-.verify-btn,
-.save-btn {
-  background: #f47b2b;
-  color: #fff;
-  font-weight: 600;
-  border: none;
-  border-radius: 0.75rem;
-  padding: 0.9rem 2rem;
-  cursor: pointer;
-  box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.15);
-  transition: all 0.25s ease;
-}
-
-.update-pass-btn:hover,
-.signout-btn:hover,
-.primary-btn:hover,
-.verify-btn:hover,
-.save-btn:hover {
-  background: #e0691f;
-}
-
-.cancel-btn {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.cancel-btn:hover {
-  background: #d9d9d9;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ============================
-   MODAL BASE
-============================ */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 2rem 2.2rem;
-  width: 90%;
-  max-width: 420px;
-  text-align: center;
-  position: relative;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-/* close button fix */
-.modal-close {
-  position: absolute;
-  top: 10px;
-  right: 14px;
-  background: none !important;
-  border: none;
-  color: #555;
-  font-size: 1.3rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.modal-close:hover {
-  background: none !important;
-  color: #f47b2b !important;
-}
-
-/* ============================
-   SEND VERIFICATION MODAL
-============================ */
-.modal-card.confirm-otp h2 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #222;
-  margin-bottom: 0.8rem;
-}
-
-.otp-info-text {
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: #444;
-  margin-bottom: 0.75rem;
-}
-
-.otp-email {
-  font-weight: 600;
-  color: #000;
-  background: #f8f8f8;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  margin: 0.5rem auto 1.2rem;
-  width: fit-content;
-}
-
-.confirm-actions {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-/* ============================
-   OTP MODAL
-============================ */
-.modal-card.otp-verification {
-  max-width: 420px;
-  padding: 2.2rem 2rem;
-  text-align: center;
-}
-
-.modal-card.otp-verification h2 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #222;
-  margin-bottom: 0.6rem;
-}
-
-.otp-desc {
-  font-size: 0.95rem;
-  line-height: 1.4;
-  color: #444;
-  margin-bottom: 0.5rem;
-}
-
-.otp-inputs {
-  display: flex;
-  justify-content: center;
-  gap: 0.6rem;
-  margin-bottom: 1.4rem;
-}
-
-.otp-inputs input {
-  width: 44px;
-  height: 44px;
-  font-size: 1.2rem;
-  text-align: center;
-  border: 1.6px solid #ccc;
-  border-radius: 6px;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.otp-inputs input:focus {
-  border-color: #f47b2b;
-  box-shadow: 0 0 3px rgba(244, 123, 43, 0.4);
-}
-
-.verify-btn {
-  background: #f47b2b;
-  border: none;
-  color: #fff;
-  font-weight: 600;
-  padding: 0.8rem 1.8rem;
-  border-radius: 0.6rem;
-  cursor: pointer;
-  transition: background 0.25s ease;
-}
-
-.verify-btn:hover {
-  background: #e0691f;
-}
-
-.verify-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.resend-wrapper {
-  margin-top: 1rem;
-  font-size: 0.9rem;
-  color: #555;
+.profile-identity {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-}
-
-.resend-btn {
-  background: none;
-  border: none;
-  color: #f47b2b;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.resend-btn:hover {
-  color: #e0691f;
-}
-
-.resend-btn:disabled {
-  color: #aaa;
-  cursor: not-allowed;
-}
-
-/* ============================
-   PASSWORD MODAL
-============================ */
-.password-modal h2 {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #222;
-  margin-bottom: 0.8rem;
-}
-
-.rules-list {
-  text-align: left;
-  margin: 1rem 0;
-  padding-left: 1.2rem;
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.rules-list li {
-  list-style-type: disc;
-  margin-bottom: 0.3rem;
-}
-
-.rules-list .valid {
-  color: #16a34a;
-}
-
-.rules-list .invalid {
-  color: #dc2626;
-}
-
-.password-field {
-  display: flex;
-  align-items: center;
-  background: #f8f8f8;
-  border-radius: 6px;
-  margin-bottom: 0.8rem;
-  padding: 0 0.5rem;
-  border: 1px solid #ddd;
-}
-
-.password-field input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  padding: 0.75rem 0.5rem;
-  font-size: 0.95rem;
-  outline: none;
-}
-
-.eye-btn {
-  background: #f47b2b;
-  border: none;
-  color: #fff;
-  border-radius: 6px;
-  width: 36px;
-  height: 36px;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: background 0.2s ease;
-}
-
-.eye-btn:hover {
-  background: #e0691f;
-}
-
-.error-text {
-  color: #dc2626;
-  font-size: 0.9rem;
-  margin: 0.4rem 0 0.6rem;
-}
-
-/* ============================
-   SUCCESS MODAL
-============================ */
-.modal-card.success {
   text-align: center;
-  padding: 2.2rem 2rem;
-}
-
-.modal-card.success i {
-  color: #16a34a;
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.modal-card.success h3 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #222;
-  margin-bottom: 1.4rem;
-}
-
-/* ============================
-   SIGN OUT CONFIRMATION MODAL
-============================ */
-.modal-card.logout-confirm {
-  max-width: 400px;
-  text-align: center;
-}
-
-.modal-card.logout-confirm h2 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin-bottom: 0.8rem;
-}
-
-.modal-card.logout-confirm p {
-  font-size: 0.95rem;
-  color: #444;
-  margin-bottom: 1.2rem;
-}
-
-.modal-card.logout-confirm .confirm-actions {
-  display: flex;
-  justify-content: center;
   gap: 1rem;
 }
-
-/* ============================
-   RESPONSIVE
-============================ */
-@media (max-width: 768px) {
-  .profile-wrapper {
-    flex-direction: column;
-    align-items: center;
-    padding: 3rem 8vw;
+.profile-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: var(--primary);
+  display: grid;
+  place-items: center;
+}
+.profile-identity h2 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+.profile-identity p {
+  color: var(--text-gray);
+  font-size: 0.85rem;
+}
+.profile-identity button {
+  margin-top: auto;
+}
+.profile-information h2 {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+.profile-information dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 0;
+}
+.profile-information dt {
+  color: var(--text-gray);
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+}
+.profile-information dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+.profile-safety {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f0f7f2;
+  padding: 1rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  margin: 2rem 0 0;
+  color: var(--primary);
+}
+@media (max-width: 760px) {
+  .profile-content {
+    padding: 152px 16px 32px;
   }
-
-  .profile-left {
-    width: 100%;
-    flex: none;
-    max-width: 28rem;
-  }
-
-  .info-grid {
+  .profile-layout {
     grid-template-columns: 1fr;
   }
-
-  .bottom-buttons {
-    justify-content: center;
+  .profile-information dl {
+    grid-template-columns: 1fr;
   }
 }

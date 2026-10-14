@@ -1,252 +1,85 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Clock } from "lucide-react";
+import { Link } from 'react-router-dom';
+import AdminLayout from '@/features/admin-dashboard/components/AdminLayout.jsx';
+import AdminMetrics from '@/features/admin-dashboard/components/AdminMetrics.jsx';
+import AdminTable from '@/features/admin-dashboard/components/AdminTable.jsx';
+import PageState from '@/shared/components/PageState.jsx';
+import { useAsyncResource } from '@/shared/hooks/useAsyncResource.js';
+import { fetchAdminDashboard } from '@/features/admin-dashboard/api/dashboard.api.js';
+import { formatCurrency } from '@/shared/lib/format.js';
 
-import AdminNavBar from "../components/AdminNavBar";
-import AdminSideBar from "../components/AdminSideBar";
-import SearchBar from "../components/SearchBar";
-import CategoryChart from "../components/CategoryChart";
-import Pagination from "../components/Pagination";
-
-import { fetchAdminDashboard } from "../service/adminDashboardServices";
-
-import "../styles/admin-home.css";
-
-import iconDeposit from "../../../assets/images/dashboard-deposits-icon.png";
-import iconSaving from "../../../assets/images/dashboard-savings-icon.png";
-import iconLifeGoals from "../../../assets/images/dashboard-life-goals-icon.png";
-import iconPension from "../../../assets/images/dashboard-dplk-icon.png";
-
-const getSortIcon = (sortConfig, columnKey, onSort) => {
-	const isActive = sortConfig?.key === columnKey;
-	const ascActive = isActive && sortConfig.direction === "asc";
-	const descActive = isActive && sortConfig.direction === "desc";
-
-	return (
-		<span
-			className={`sort-icons ${isActive ? "active" : ""}`}
-			onClick={(e) => {
-				e.stopPropagation();
-				onSort(columnKey);
-			}}
-			role="button"
-			title="Sort"
-			tabIndex={0}
-			onKeyDown={(e) => {
-				if (e.key === "Enter" || e.key === " ") onSort(columnKey);
-			}}
-		>
-			<span className={`arrow up ${ascActive ? "active" : ""}`}>↑</span>
-			<span className={`arrow down ${descActive ? "active" : ""}`}>↓</span>
-		</span>
-	);
-};
+async function loadDashboard() {
+  return (await fetchAdminDashboard()).data;
+}
+const columns = [
+  { key: 'customerId', label: 'CIF', sortable: true },
+  { key: 'customerName', label: 'Nasabah', sortable: true },
+  { key: 'action', label: 'Tindakan' },
+];
 
 export default function AdminHome() {
-	const navigate = useNavigate();
-	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-	const [dashboard, setDashboard] = useState(null);
-	const [searchQuery, setSearchQuery] = useState("");
-	const [sortConfig, setSortConfig] = useState(null);
-	const [page, setPage] = useState(1);
-	const rowsPerPage = 10;
-
-	const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
-	const handleSort = (columnKey) => {
-		setSortConfig((prev) => {
-			if (!prev || prev.key !== columnKey) {
-				return { key: columnKey, direction: "asc" };
-			}
-			if (prev.direction === "asc") {
-				return { key: columnKey, direction: "desc" };
-			}
-			return null;
-		});
-	};
-
-	useEffect(() => {
-		const loadDashboard = async () => {
-			const resp = await fetchAdminDashboard();
-			setDashboard(resp.data);
-		};
-		loadDashboard();
-	}, []);
-
-	if (!dashboard) return <div style={{ padding: "2rem" }}>Loading...</div>;
-
-	const colorPalette = ["#FFB3BA", "#FFDFBA", "#FFFFBA", "#BAFFC9", "#BAE1FF"];
-
-	const categoryData = dashboard.categories.map((item, index) => ({
-		name: item.categoryName,
-		value: item.percentage,
-		amount: `Rp${item.total.toLocaleString("id-ID")}`,
-		color: colorPalette[index % colorPalette.length],
-	}));
-
-	const transactions = dashboard.users.map((u, i) => ({
-		id: i + 1,
-		userId: u.userid,
-		cif: u.customerId,
-		nik: u.nik,
-		name: u.customerName,
-	}));
-
-	const filteredTransactions = transactions.filter(
-		(t) =>
-			t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			t.cif.includes(searchQuery) ||
-			t.nik.includes(searchQuery)
-	);
-
-	const sortedTransactions = sortConfig
-		? [...filteredTransactions].sort((a, b) => {
-			const { key, direction } = sortConfig;
-			const dir = direction === "asc" ? 1 : -1;
-			return a[key].localeCompare(b[key]) * dir;
-		})
-		: filteredTransactions;
-
-	const totalPages = Math.ceil(sortedTransactions.length / rowsPerPage);
-	const paginatedRows = sortedTransactions.slice(
-		(page - 1) * rowsPerPage,
-		page * rowsPerPage
-	);
-
-	const handleViewTransactions = (transaction) => {
-		navigate("/admin/transactions", { state: { userId: transaction.userId } });
-	};
-
-	return (
-		<div className="admin-container">
-			<AdminNavBar onMenuToggle={toggleSidebar} />
-			<AdminSideBar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-
-			<main className="admin-home-main">
-				<div className="top-row">
-					<section className="asset-panel">
-						<div className="asset-header">
-							<h2 className="asset-title">Assets Total</h2>
-							<div className="asset-total">
-								Rp{dashboard.totalAsset.toLocaleString("id-ID")}
-							</div>
-						</div>
-
-						<div className="asset-grid">
-							<div className="asset-item">
-								<div className="asset-info">
-									<div className="asset-label">Time Deposits</div>
-									<div className="asset-value">
-										Rp{dashboard.totalTimeDeposit.toLocaleString("id-ID")}
-									</div>
-								</div>
-								<div className="asset-icon">
-									<img src={iconDeposit} alt="Time Deposits" />
-								</div>
-							</div>
-
-							<div className="asset-item">
-								<div className="asset-info">
-									<div className="asset-label">Savings</div>
-									<div className="asset-value">
-										Rp{dashboard.totalSaving.toLocaleString("id-ID")}
-									</div>
-								</div>
-								<div className="asset-icon">
-									<img src={iconSaving} alt="Savings" />
-								</div>
-							</div>
-
-							<div className="asset-item">
-								<div className="asset-info">
-									<div className="asset-label">Life Goals</div>
-									<div className="asset-value">
-										Rp{dashboard.totalLifegoals.toLocaleString("id-ID")}
-									</div>
-								</div>
-								<div className="asset-icon">
-									<img src={iconLifeGoals} alt="Life Goals" />
-								</div>
-							</div>
-
-							<div className="asset-item">
-								<div className="asset-info">
-									<div className="asset-label">Pension Funds</div>
-									<div className="asset-value">
-										Rp{dashboard.totalPensionFund.toLocaleString("id-ID")}
-									</div>
-								</div>
-								<div className="asset-icon">
-									<img src={iconPension} alt="Pension Funds" />
-								</div>
-							</div>
-						</div>
-					</section>
-
-					<CategoryChart data={categoryData} />
-				</div>
-
-				<section className="table-section">
-					<div className="table-header">
-						<h2>Transaction History</h2>
-						<SearchBar value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-					</div>
-
-					<div className="table-wrapper">
-						<table className="transaction-table">
-							<thead>
-								<tr>
-									<th className="col-no">No</th>
-									<th>User ID</th>
-									<th>CIF</th>
-									<th>NIK</th>
-									<th
-										className="sortable name-col"
-										onClick={() => handleSort("name")}
-									>
-										<div className="th-content">
-											<span className="th-label">Customer Name</span>
-											<div className="th-icons">
-												{getSortIcon(sortConfig, "name", handleSort)}
-											</div>
-										</div>
-									</th>
-									<th className="col-action">Action</th>
-								</tr>
-							</thead>
-
-							<tbody>
-								{paginatedRows.map((transaction, index) => (
-									<tr key={transaction.id}>
-										<td className="col-no">
-											{(page - 1) * rowsPerPage + index + 1}
-										</td>
-										<td>{transaction.userId}</td>
-										<td>{transaction.cif}</td>
-										<td>{transaction.nik}</td>
-										<td>{transaction.name}</td>
-										<td className="col-action">
-											<button
-												className="view-btn"
-												onClick={() => handleViewTransactions(transaction)}
-												type="button"
-											>
-												<Clock size={30} />
-											</button>
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-
-					<Pagination
-						currentPage={page}
-						totalPages={totalPages}
-						onPageChange={setPage}
-					/>
-				</section>
-			</main>
-		</div>
-	);
+  const { data, loading, error, refetch } = useAsyncResource(loadDashboard);
+  return (
+    <AdminLayout
+      title="Ringkasan"
+      description="Pantau portofolio dan aktivitas keuangan nasabah."
+    >
+      {loading ? (
+        <PageState loading />
+      ) : error ? (
+        <PageState
+          title="Ringkasan belum dapat dimuat"
+          message={error}
+          onRetry={refetch}
+        />
+      ) : (
+        <>
+          <AdminMetrics
+            items={[
+              ['Total aset', formatCurrency(data.totalAsset)],
+              ['Tabungan', formatCurrency(data.totalSaving)],
+              ['Deposito', formatCurrency(data.totalTimeDeposit)],
+              ['Life goals', formatCurrency(data.totalLifegoals)],
+              ['Dana pensiun', formatCurrency(data.totalPensionFund)],
+            ]}
+          />
+          <section className="content-panel admin-category-panel">
+            <h2>Kategori transaksi</h2>
+            <ul className="category-list">
+              {(data.categories || []).map((category) => (
+                <li key={category.categoryName}>
+                  <span>{category.categoryName}</span>
+                  <strong>
+                    {formatCurrency(category.total)} · {category.percentage}%
+                  </strong>
+                </li>
+              ))}
+            </ul>
+            {!data.categories?.length && <p>Belum ada transaksi.</p>}
+          </section>
+          <AdminTable
+            title="Nasabah"
+            columns={columns}
+            rows={(data.users || []).map((user) => ({
+              ...user,
+              id: user.userid,
+            }))}
+            renderCell={(row, column) =>
+              column.key === 'action' ? (
+                <Link
+                  className="table-action-link"
+                  to={
+                    '/admin/transactions?user=' + encodeURIComponent(row.userid)
+                  }
+                >
+                  Lihat transaksi
+                </Link>
+              ) : (
+                row[column.key]
+              )
+            }
+          />
+        </>
+      )}
+    </AdminLayout>
+  );
 }

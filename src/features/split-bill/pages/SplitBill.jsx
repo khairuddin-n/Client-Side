@@ -1,186 +1,90 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Navbar from "../../../shared/components/Navbar";
-import { fetchSplitBills } from "../api/split-bill.api";
-import "../styles/split-bill.css";
+import { Link } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
+import PageLayout from '@/shared/components/PageLayout.jsx';
+import PageState from '@/shared/components/PageState.jsx';
+import { useAsyncResource } from '@/shared/hooks/useAsyncResource.js';
+import { fetchSplitBills } from '@/features/split-bill/api/split-bill.api.js';
+import { formatCurrency, formatDate } from '@/shared/lib/format.js';
+
+async function loadBills() {
+  return (await fetchSplitBills()).data;
+}
 
 export default function SplitBill() {
-  const [bills, setBills] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetchSplitBills();
-
-        if (!data || !data.data || data.data.length === 0) {
-          setBills([]);
-        } else {
-          setBills(data.data);
-        }
-      } catch (err) {
-        console.error("Error loading split bills:", err);
-        setError(err.message || "Failed to load split bills");
-        setBills([]);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, []);
-
-  const cardColors = ["#6dddd0", "#FFB500", "#9c7edc"];
-
-  if (loading) return (
-    <div className="sb-container">
-      <Navbar />
-      <div className="loading" style={{ textAlign: 'center', padding: '3rem' }}>Loading split bills...</div>
-    </div>
-  );
-
-  if (error) {
-    return (
-      <div className="sb-container">
-        <Navbar />
-        <main className="sb-main">
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <h2>Unable to Load Split Bills</h2>
-            <p style={{ color: "#777", margin: "1rem 0" }}>{error}</p>
-            <button onClick={() => window.location.reload()}>Retry</button>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
+  const { data: bills, loading, error, refetch } = useAsyncResource(loadBills);
   return (
-    <div className="sb-container">
-      <Navbar />
-      <main className="sb-main">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-          }}
+    <PageLayout
+      title="Split bill"
+      description="Pantau tagihan bersama dan status pembayaran setiap peserta."
+      eyebrow="TAGIHAN BERSAMA"
+      actions={
+        <button
+          type="button"
+          className="button-secondary"
+          onClick={refetch}
+          disabled={loading}
         >
-          <div>
-            <h1 className="sb-title">Split Bill</h1>
-            <p className="sb-sub">Track and manage your shared expenses</p>
-          </div>
-
-          <div>
-            <button
-              className="add-split-btn"
-              onClick={() => navigate("/detailmycard")}
-              aria-label="Add split bill"
-            >
-              + Add Split Bill
-            </button>
-          </div>
+          <RefreshCw size={16} /> Perbarui
+        </button>
+      }
+    >
+      {loading ? (
+        <PageState loading />
+      ) : error ? (
+        <PageState
+          title="Split bill belum dapat dimuat"
+          message={error}
+          onRetry={refetch}
+        />
+      ) : !bills?.length ? (
+        <PageState
+          title="Belum ada split bill"
+          message="Buat tagihan bersama dari transaksi pengeluaran di halaman rekening."
+        />
+      ) : (
+        <div className="product-account-list">
+          {bills.map((bill) => {
+            const progress =
+              bill.total_bill > 0
+                ? Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      Math.round(
+                        ((bill.total_bill - bill.remaining_bill) /
+                          bill.total_bill) *
+                          100,
+                      ),
+                    ),
+                  )
+                : 0;
+            return (
+              <Link
+                className="product-account-card"
+                key={bill.split_bill_id}
+                to={
+                  '/splitbill/detail?bill=' +
+                  encodeURIComponent(bill.split_bill_id)
+                }
+              >
+                <h2>{bill.split_bill_title}</h2>
+                <p>{formatDate(bill.created_time)}</p>
+                <strong>{formatCurrency(bill.total_bill)}</strong>
+                <progress
+                  className="goal-progress"
+                  max={100}
+                  value={progress}
+                  aria-label={`Pembayaran ${bill.split_bill_title}`}
+                />
+                <p>
+                  {progress}% dibayar · Sisa{' '}
+                  {formatCurrency(bill.remaining_bill)}
+                </p>
+              </Link>
+            );
+          })}
         </div>
-
-        {bills.length === 0 ? (
-          <div
-            style={{
-              marginTop: "2rem",
-              textAlign: "center",
-              color: "#888",
-              fontSize: "1.1rem",
-            }}
-          >
-            <p>No Split Bills found.</p>
-          </div>
-        ) : (
-          <div className="sb-grid">
-            {bills.map((bill, i) => {
-              const row = Math.floor(i / 3);
-              const col = i % 3;
-              const color = cardColors[(row + col) % cardColors.length];
-
-              const members = bill.members || [];
-              const membersToShow = members.slice(0, 3);
-              const extraCount = Math.max(0, members.length - membersToShow.length);
-
-              const paidCount = members.filter((m) => m.hasPaid || m.status === "Paid").length;
-              const progressPercent = (paidCount / Math.max(1, members.length)) * 100;
-
-              return (
-                <div
-                  key={bill.split_bill_id || bill.splitBillId || i}
-                  className="sb-card"
-                  style={{ "--color": color }}
-                >
-                  <div className="sb-card-header">
-                    <h3>{bill.split_bill_title || bill.splitBillTitle}</h3>
-                    <p>
-                      <span>Total Bill</span>
-                      <span className="amount">
-                        Rp {Number(bill.total_bill || bill.totalBill).toLocaleString("id-ID")}
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="sb-progress">
-                    <div className="progress-track">
-                      <div
-                        className="progress-fill"
-                        style={{
-                          width: `${progressPercent}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="sb-main-section">
-                    <div className="sb-members">
-                      {membersToShow.map((m, idx) => (
-                        <div key={m.member_id || idx} className="sb-member-row">
-                          <span>{m.member_name}</span>
-                          <span>
-                            Rp{Number(m.amount || 0).toLocaleString("id-ID")}{" "}
-                            <span
-                              className={`status ${
-                                m.hasPaid || m.status === "Paid" ? "paid" : "unpaid"
-                              }`}
-                            >
-                              {m.hasPaid || m.status === "Paid" ? "Paid" : "Unpaid"}
-                            </span>
-                          </span>
-                        </div>
-                      ))}
-                      {extraCount > 0 && (
-                        <div className="sb-member-more">+{extraCount} more</div>
-                      )}
-                    </div>
-
-                    <div className="sb-actions sb-actions-right">
-                      <button
-                        className="view-btn"
-                        onClick={() =>
-                          navigate("/splitbill/detail", {
-                            state: {
-                              splitBillId: bill.split_bill_id || bill.splitBillId,
-                              color,
-                            },
-                          })
-                        }
-                      >
-                        View Detail
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
-    </div>
+      )}
+    </PageLayout>
   );
 }

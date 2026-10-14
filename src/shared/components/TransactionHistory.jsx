@@ -1,206 +1,88 @@
-import React, { useState } from "react";
-import PropTypes from "prop-types";
-import "../styles/components/transaction-history.css";
-import { useNavigate } from "react-router-dom";
+import { Download } from 'lucide-react';
+import { formatCurrency } from '@/shared/lib/format.js';
+import PageState from '@/shared/components/PageState.jsx';
+
 export default function TransactionHistory({
   transactions = [],
   months = [],
-  selectedMonth = null,
+  selectedMonth,
   onMonthChange,
-  themeColor = "#6dddd0",
-  title = "Transaction History",
   onTransactionClick,
-  productType = "SAV",
+  title = 'Riwayat transaksi',
   showDownloadButton = false,
   onDownload,
   loading = false,
-  emptyMessage = "No transactions available",
+  emptyMessage = 'Tidak ada transaksi untuk periode ini.',
 }) {
-  const [hoveredMonth, setHoveredMonth] = useState(null);
-  const navigate = useNavigate();
-
-  const handleMonthClick = (month) => {
-    if (onMonthChange) {
-      onMonthChange(month);
-    }
-  };
-
-  const handleTransactionClick = (transaction) => {
-    if (onTransactionClick) {
-      onTransactionClick(transaction);
-    }
-  };
-
   return (
-    <div className="trx-history-container" style={{ "--theme-color": themeColor }}>
-      <div className="trx-history-header">
-        <h3 className="trx-history-title">{title}</h3>
-        {showDownloadButton && onDownload && (
+    <section className="statement-history" aria-busy={loading}>
+      <header className="statement-heading">
+        <h2>{title}</h2>
+        {showDownloadButton && (
           <button
-            className="trx-history-download-btn"
+            type="button"
+            className="button-secondary"
             onClick={onDownload}
-            aria-label="Download transactions"
-            disabled={loading}
+            disabled={loading || transactions.length === 0}
           >
-            <i className="fas fa-download"></i>
+            <Download size={16} aria-hidden="true" /> Ekspor CSV
           </button>
         )}
-      </div>
-
+      </header>
       {months.length > 0 && (
-        <div className="trx-history-months">
-          {months.map((month) => {
-            const isActive =
-              selectedMonth?.month === month.month &&
-              selectedMonth?.year === month.year;
-
-            return (
-              <button
-                key={`${month.month}-${month.year}`}
-                className={`trx-month-btn ${isActive ? "active" : ""}`}
-                onClick={() => handleMonthClick(month)}
-                onMouseEnter={() => setHoveredMonth(month)}
-                onMouseLeave={() => setHoveredMonth(null)}
-                disabled={loading}
-                style={{
-                  backgroundColor: isActive ? themeColor : undefined,
-                  color: isActive ? "#fff" : undefined,
-                  borderColor: isActive ? themeColor : undefined,
-                  cursor: loading ? "wait" : "pointer",
-                  opacity: loading && !isActive ? 0.5 : 1
-                }}
-              >
-                {month.label}
-              </button>
-            );
-          })}
+        <div className="statement-months" aria-label="Periode transaksi">
+          {months.map((month) => (
+            <button
+              type="button"
+              key={`${month.month}-${month.year}`}
+              aria-pressed={
+                selectedMonth?.month === month.month &&
+                selectedMonth?.year === month.year
+              }
+              onClick={() => onMonthChange(month)}
+            >
+              {month.label}
+              <span>{month.year}</span>
+            </button>
+          ))}
         </div>
       )}
-
-      <div className="trx-history-list-container">
-
-        {loading && (
-          <div className="trx-loading-overlay">
-            <div className="trx-spinner" style={{ borderTopColor: themeColor }}></div>
-          </div>
-        )}
-
-        <div className="trx-history-list" style={{ opacity: loading ? 0.4 : 1 }}>
-          {transactions.length > 0 ? (
-            transactions.map((group, groupIndex) => (
-              <div key={group.key} className="trx-group">
-                <p className="trx-group-date">
-                  <strong>{group.date}</strong>
-                </p>
-                <hr className="trx-group-divider" />
-
-                {group.items?.map((item, itemIndex) => {
-                  const amountStr = String(item.amount || "");
-
-                  const isCredit =
-                    item.debit_credit === "C" ||
-                    item.jenisTransaksi === "Pemasukan" ||
-                    amountStr.startsWith("+");
-
-                  const isDebit =
-                    item.debit_credit === "D" ||
-                    item.jenisTransaksi === "Pengeluaran" ||
-                    amountStr.startsWith("-");
-
-                  let amountColor = "#000000";
-                  if (isCredit && !amountStr.startsWith("-")) {
-                    amountColor = "#16a34a";
-                  }
-
-                  return (
-                    <div
-                      key={item.transactionId || `${group.key}-${item.transactionDate}-${itemIndex}`}
-                      className="trx-item"
-                      onClick={() => !loading && handleTransactionClick(item)}
-                      role="button"
-                      tabIndex={0}
-                      style={{ cursor: loading ? "default" : "pointer" }}
+      {loading ? (
+        <PageState loading />
+      ) : transactions.length === 0 ? (
+        <PageState message={emptyMessage} />
+      ) : (
+        <div className="statement-groups">
+          {transactions.map((group) => (
+            <section key={group.key}>
+              <h3>{group.date}</h3>
+              <ul>
+                {group.items.map((item, index) => (
+                  <li key={item.transactionId || `${group.key}-${index}`}>
+                    <button
+                      type="button"
+                      className="statement-row"
+                      onClick={() => onTransactionClick?.(item)}
                     >
-                      <div className="trx-item-left">
-                        <p className="trx-item-type">
-                          {item.type || item.transactionType || "-"}
-                        </p>
-                        <p className="trx-item-detail">
-                          {item.detail || item.partyName || "-"}
-                        </p>
-                      </div>
-
-                      <div className="trx-item-right">
-                        <span
-                          className="trx-item-amount"
-                          style={{ color: amountColor, fontWeight: "600" }}
-                        >
-                          {(Number(item.amount) || 0).toLocaleString("id-ID", {
-                            style: "currency",
-                            currency: "IDR"
-                          })}
-                        </span>
-
-                        {productType === "SAV" && isDebit && (
-                          <button
-                            className="trx-split-btn"
-                            disabled={loading}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (item.split_bill_id) {
-                                navigate("/splitbill/detail", {
-                                  state: {
-                                    splitBillId: item.split_bill_id,
-                                    color: themeColor
-                                  }
-                                });
-                              } else {
-                                if (onTransactionClick) onTransactionClick(item);
-                              }
-                            }}
-                            style={{
-                              borderColor: themeColor,
-                              color: themeColor,
-                            }}
-                          >
-                            {item.split_bill_id ? "View Split Bill" : "Split Bill?"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ))
-          ) : (
-            <div className="trx-history-empty">
-              <p>
-                {!loading && (
-                  <>
-                    {emptyMessage}
-                    {selectedMonth && ` for ${selectedMonth.label} ${selectedMonth.year}`}
-                  </>
-                )}
-              </p>
-            </div>
-          )}
+                      <span>
+                        <strong>{item.type || 'Transaksi'}</strong>
+                        <span>{item.detail || '—'}</span>
+                      </span>
+                      <span
+                        className={
+                          item.debit_credit === 'C' ? 'amount-credit' : ''
+                        }
+                      >
+                        {formatCurrency(item.amount)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
         </div>
-      </div>
-    </div>
+      )}
+    </section>
   );
 }
-
-TransactionHistory.propTypes = {
-  transactions: PropTypes.array,
-  months: PropTypes.array,
-  selectedMonth: PropTypes.object,
-  onMonthChange: PropTypes.func,
-  themeColor: PropTypes.string,
-  title: PropTypes.string,
-  onTransactionClick: PropTypes.func,
-  productType: PropTypes.string,
-  showDownloadButton: PropTypes.bool,
-  onDownload: PropTypes.func,
-  loading: PropTypes.bool,
-  emptyMessage: PropTypes.string,
-};

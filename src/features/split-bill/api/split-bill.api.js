@@ -1,276 +1,101 @@
-import axios from "axios";
+import { api } from '@/shared/api/http.js';
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-});
-
-function normalizeBill(b) {
-  if (!b) return null;
-
-  const bill = {
-    split_bill_id: b.split_bill_id || b.splitBillId || b.id || null,
+export function normalizeBill(bill) {
+  if (!bill) return null;
+  const members =
+    bill.members ?? bill.billMembers ?? bill.splitBillMemberDetail ?? [];
+  const result = {
+    ...bill,
+    split_bill_id: bill.split_bill_id ?? bill.splitBillId ?? bill.id,
     split_bill_title:
-      b.split_bill_title ||
-      b.splitBillTitle ||
-      b.title ||
-      "Untitled Bill",
-    total_bill:
-      Number(b.total_bill || b.totalBill || b.totalAmount || 0) || 0,
-    ref_id: b.ref_id || b.refId || b.transactionId || null,
-    created_time: b.created_time || b.createdTime || b.created_at || new Date().toISOString(),
-    members: (b.members || b.billMembers || b.splitBillMemberDetail || []).map((m) => {
-      const amountRaw = m.amount ?? m.amountShare ?? m.totalBillAmount ?? 0;
-      const amount = typeof amountRaw === "string"
-        ? Number(amountRaw.replace(/[^\d.-]/g, "")) || 0
-        : Number(amountRaw || 0);
-
-      const status = (m.status || (m.hasPaid ? (m.hasPaid ? "Paid" : "Unpaid") : m.paymentStatus) || "Unpaid");
+      bill.split_bill_title ??
+      bill.splitBillTitle ??
+      bill.title ??
+      'Tanpa judul',
+    total_bill: Number(
+      bill.total_bill ?? bill.totalBill ?? bill.totalAmount ?? 0,
+    ),
+    ref_id: bill.ref_id ?? bill.refId ?? bill.transactionId,
+    created_time: bill.created_time ?? bill.createdTime ?? bill.created_at,
+    account_number: bill.account_number ?? bill.accountNumber,
+    transaction_id: bill.transaction_id ?? bill.transactionId,
+    members: members.map((member) => {
+      const hasPaid =
+        member.hasPaid === true || member.status?.toLowerCase() === 'paid';
       return {
-        member_id: m.member_id || m.memberId || m.id || null,
-        member_name: m.member_name || m.memberName || m.participantName || "Unknown",
-        amount,
-        status,
-        hasPaid: m.hasPaid === undefined ? (status === "Paid") : Boolean(m.hasPaid),
+        member_id: member.member_id ?? member.memberId ?? member.id ?? null,
+        member_name:
+          member.member_name ??
+          member.memberName ??
+          member.participantName ??
+          '',
+        amount: Number(
+          member.amount ?? member.amountShare ?? member.totalBillAmount ?? 0,
+        ),
+        hasPaid,
+        status: hasPaid ? 'Paid' : 'Unpaid',
+        payment_time: member.paymentTime,
       };
     }),
   };
-
-  bill.remaining_bill = bill.members
-    .filter((m) => m.status !== "Paid")
-    .reduce((s, m) => s + (Number(m.amount) || 0), 0);
-
-  return bill;
+  result.remaining_bill = result.members
+    .filter((member) => !member.hasPaid)
+    .reduce((sum, member) => sum + member.amount, 0);
+  return result;
 }
 
 export async function fetchSplitBills() {
-  try {
-    const token = sessionStorage.getItem("token");
-
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
-    const res = await api.get("/api/v1/split-bill", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      },
-      timeout: 5000,
-    });
-
-    if (!Array.isArray(res?.data?.data)) {
-      return {
-        status: true,
-        data: []
-      };
-    }
-
-    return {
-      status: true,
-      data: res.data.data.map(normalizeBill),
-    };
-  } catch (error) {
-    console.error("Failed to fetch split bills:", error?.message);
-    return {
-      status: false,
-      data: []
-    };
-  }
+  const { data } = await api.get('/api/v1/split-bill');
+  if (!Array.isArray(data?.data))
+    throw new Error('Respons split bill tidak valid.');
+  return { status: true, data: data.data.map(normalizeBill) };
 }
 
 export async function getSplitBillById(splitBillId) {
-  try {
-    const token = sessionStorage.getItem("token");
-
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
-    const res = await api.post(
-      "/api/v1/split-bill/detail",
-      { splitBillId },
-      {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        timeout: 5000,
-      }
-    );
-
-    const data = res?.data?.data;
-    if (!data) {
-      throw new Error("No data returned from API");
-    }
-
-    return {
-      split_bill_id: data.splitBillId,
-      split_bill_title: data.splitBillTitle,
-      account_number: data.accountNumber,
-      currency: data.currency,
-      transaction_id: data.transactionId,
-      ref_id: data.refId,
-      total_bill: data.totalBill,
-      created_time: data.createdTime,
-      transaction_date: data.transactionDate,
-
-      members: data.members?.map(m => ({
-        member_id: m.memberId,
-        member_name: m.memberName,
-        amount: Number(m.amount),
-        hasPaid: m.hasPaid,
-        status: m.hasPaid ? "Paid" : "Unpaid",
-        payment_time: m.paymentTime,
-        isNew: false,
-      })) || []
-    };
-
-  } catch (error) {
-    console.error("Failed to fetch split bill detail:", error?.message);
-    throw error;
-  }
-}
-
-export async function updateSplitBillStatus(split_bill_id, updatedMembers) {
-  try {
-    const token = sessionStorage.getItem("token");
-
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
-    const payload = {
-      splitBillId: split_bill_id,
-      members: updatedMembers.map((m) => ({
-        memberId: m.member_id,
-        memberName: m.member_name,
-        amount: Number(m.amount) || 0,
-        hasPaid: m.status === "Paid" || m.hasPaid === true,
-        status: m.status,
-      })),
-    };
-
-    const res = await api.post("/api/v1/split-bill/update", payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      },
-      timeout: 5000,
-    });
-
-    if (res.status >= 200 && res.status < 300) {
-      return normalizeBill(res.data?.data || res.data);
-    }
-
-    throw new Error("Failed to update split bill status");
-  } catch (error) {
-    console.error("Failed to update split bill status:", error?.message);
-    throw error;
-  }
+  if (!splitBillId) throw new Error('Split bill tidak ditemukan.');
+  const { data } = await api.post('/api/v1/split-bill/detail', { splitBillId });
+  if (!data?.data) throw new Error('Detail split bill tidak ditemukan.');
+  return normalizeBill(data.data);
 }
 
 export async function createSplitBill(payload) {
-  try {
-    const token = sessionStorage.getItem("token");
-
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
-    const newBill = {
-      accountNumber: payload.accountNumber,
-      transactionId: payload.transactionId,
-      splitBillTitle: payload.splitBillTitle,
-      currency: payload.currency || "IDR",
-      totalAmount: payload.totalAmount,
-      billMembers: payload.billMembers,
-    };
-
-    const res = await api.post("/api/v1/split-bill/add", newBill, {
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      },
-      timeout: 5000,
-    });
-
-    if (res.status >= 200 && res.status < 300) {
-      return normalizeBill(res.data?.data || res.data);
-    }
-
-    throw new Error("Failed to create split bill");
-  } catch (error) {
-    console.error("Failed to create split bill:", error?.message);
-    throw error;
-  }
+  const { data } = await api.post('/api/v1/split-bill/add', {
+    accountNumber: payload.accountNumber,
+    transactionId: payload.transactionId,
+    splitBillTitle: payload.splitBillTitle,
+    currency: payload.currency || 'IDR',
+    totalAmount: payload.totalAmount,
+    billMembers: payload.billMembers,
+  });
+  if (data?.status === false)
+    throw new Error(data.message || 'Operasi split bill gagal.');
+  return normalizeBill(data?.data || data);
 }
 
-export async function editSplitBill(split_bill_id, bill, members) {
-  try {
-    const token = sessionStorage.getItem("token");
-
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
-    const payload = {
-      splitBillId: split_bill_id,
-      transactionId: bill.transaction_id,
-      splitBillTitle: bill.split_bill_title,
-      totalAmount: Number(bill.total_bill),
-      billMembers: members.map((m) => ({
-        memberId: m.member_id,
-        memberName: m.member_name,
-        amountShare: Number(m.amount) || 0,
-        hasPaid: m.status === "Paid" || m.hasPaid === true,
-      })),
-    };
-
-    const res = await api.post("/api/v1/split-bill/edit", payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      },
-      timeout: 5000,
-    });
-
-    return normalizeBill(res.data?.data || res.data);
-  } catch (error) {
-    console.error("Failed to edit split bill:", error?.message);
-    throw error;
-  }
+export async function editSplitBill(splitBillId, bill, members) {
+  const { data } = await api.post('/api/v1/split-bill/edit', {
+    splitBillId,
+    transactionId: bill.transaction_id,
+    splitBillTitle: bill.split_bill_title,
+    totalAmount: Number(bill.total_bill),
+    billMembers: members.map((member) => ({
+      memberId: member.member_id,
+      memberName: member.member_name.trim(),
+      amountShare: Number(member.amount),
+      hasPaid: member.hasPaid,
+    })),
+  });
+  if (data?.status === false)
+    throw new Error(data.message || 'Operasi split bill gagal.');
+  return normalizeBill(data?.data || data);
 }
 
-export async function markAsPaid(split_bill_id, memberId) {
-  try {
-    const token = sessionStorage.getItem("token");
-
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
-    const payload = {
-      splitBillId: split_bill_id,
-      memberId
-    };
-
-    const res = await api.post("/api/v1/split-bill/mark-paid", payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      },
-      timeout: 5000,
-    });
-
-    return res.data;
-  } catch (error) {
-    console.error("Failed to edit split bill:", error?.message);
-    throw error;
-  }
+export async function markAsPaid(splitBillId, memberId) {
+  const { data } = await api.post('/api/v1/split-bill/mark-paid', {
+    splitBillId,
+    memberId,
+  });
+  if (data?.status === false)
+    throw new Error(data.message || 'Pembayaran belum dapat diperbarui.');
+  return data;
 }

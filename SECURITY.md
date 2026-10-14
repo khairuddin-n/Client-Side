@@ -1,21 +1,25 @@
-# Security Policy
+# Keamanan Wandoor Client
 
-## Supported Versions
+Frontend dipelihara pada branch aktif `staging`. Gunakan lockfile yang direview, Node yang didukung, dan `npm ci`. Jangan memasukkan password, API key, JWT nyata, atau identitas nasabah dalam source, test, screenshot, log, atau variabel `VITE_*`.
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+## Kontrol frontend
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+- Login dan OTP selalu diproses API; tidak ada kredensial atau token fallback.
+- Sesi divalidasi terhadap expiry/peran untuk routing, dengan penanganan 401, idle logout, dan pembersihan state autentikasi.
+- Respons request lama tidak boleh mengganti data resource baru atau menghapus sesi baru.
+- Payload API dipertahankan; mutasi menunggu respons server. Data gagal tidak diganti data finansial fiktif.
+- React merender teks tanpa raw HTML. CSV menetralkan formula yang berasal dari input tidak tepercaya.
+- Sertifikat HTTPS diverifikasi. Dependensi JS/CSS eksternal dari CDN dihapus.
+- Deployment Nginx menyertakan CSP, proteksi framing, MIME sniffing, kebijakan referrer, dan cache API yang tidak disimpan.
 
-## Reporting a Vulnerability
+## Batas dan kewajiban backend
 
-Use this section to tell people how to report a vulnerability.
+JWT saat ini disimpan di sessionStorage agar kompatibel dengan kontrak bearer backend. Penyimpanan ini dapat diakses JavaScript dan tetap memiliki risiko jika terjadi XSS. Migrasi ke cookie `HttpOnly; Secure; SameSite` membutuhkan perubahan backend dan strategi CSRF yang sesuai.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Dekode token, route guard, dan tombol yang disembunyikan bukan kontrol otorisasi. Backend wajib memverifikasi signature/expiry, kepemilikan data, izin menu, penugasan approval, rate limiting login/OTP, dan revokasi token. Logout idle mencoba revokasi API, tetapi kegagalan jaringan tidak membuktikan token sudah dicabut di server.
+
+CSP memakai `style-src 'unsafe-inline'` untuk style dinamis React; script tetap dibatasi ke same-origin. HSTS dan terminasi HTTPS harus diterapkan oleh ingress produksi. Hasil audit dependensi dan pemindaian WCAG otomatis bukan jaminan seluruh aplikasi bebas kerentanan.
+
+## Pelaporan
+
+Laporkan kerentanan melalui private vulnerability reporting repository bila tersedia, atau hubungi pemilik repository secara privat. Jangan membuka issue publik dengan token, data nasabah, atau langkah eksploitasi terhadap lingkungan aktif.

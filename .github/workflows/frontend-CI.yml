@@ -1,43 +1,38 @@
-name: Frontend CI/CD
+name: Frontend checks and staging deployment
 
 on:
   push:
-    branches: ["staging"]
+    branches: [staging, main, 'refactor/**']
   pull_request:
-    branches: ["staging"]
+    branches: [staging, main]
+
+permissions:
+  contents: read
 
 jobs:
-  build-test-lint-analyze-deploy:
+  checks:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=high
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
 
-      - name: Install dependencies
-        run: |
-          echo "📦 Installing dependencies..."
-          npm i
-
-      - name: Run ESLint
-        run: |
-          echo "🔍 Running ESLint..."
-          npm run lint || echo "::warning::Linting failed, check your code style!"
-        continue-on-error: true
-
-      # - name: Run Unit Tests
-      #   run: |
-      #     echo "🧪 Running Unit Tests..."
-      #     npm test
-
+  deploy-staging:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -60,7 +55,7 @@ jobs:
 
       # === Find & Replace image tag di repo infra branch (staging) ===
       - name: Checkout infra repository (staging)
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: kelompok-3-odp343/infra
           token: ${{ secrets.ACCESS_TOKEN }}
@@ -78,28 +73,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "Update frontend image tag to frontend-${{ github.sha }}"
-          git push origin staging
-
-      # # === Find & Replace image tag di repo infra branch (staging) ===
-      # - name: Checkout infra repository (staging)
-      #   uses: actions/checkout@v3
-      #   with:
-      #     repository: kelompok-3-odp343/infra
-      #     token: ${{ secrets.ACCESS_TOKEN }}
-      #     path: infra
-      #     ref: staging
-
-      # - name: Update image tag in frontend deployment
-      #   run: |
-      #     cd infra/k3s/frontend-wandoor
-      #     sed -i "s|jrtr1/wandoor-frontend-app:.*|jrtr1/wandoor-frontend-app:frontend-${{ github.sha }}|g" frontend-deployment.yaml
-
-      # - name: Commit and push updated image tag
-      #   run: |
-      #     cd infra
-      #     git config user.name "github-actions[bot]"
-      #     git config user.email "github-actions[bot]@users.noreply.github.com"
-      #     git add .
-      #     git commit -m "Update frontend image tag to frontend-${{ github.sha }}"
-      #     git push origin staging
+          if ! git diff --cached --quiet; then
+            git commit -m "Update frontend image tag to frontend-${{ github.sha }}"
+            git push origin staging
+          fi

@@ -1,24 +1,25 @@
-import React from "react";
-import PropTypes from "prop-types";
-import "../styles/search-bar.css";
+import { Search } from 'lucide-react';
+import { useId } from 'react';
 
-export default function SearchBar({ value, onChange, placeholder = "Search..." }) {
-	return (
-		<div className="search-container">
-			<input
-				type="text"
-				placeholder={placeholder}
-				value={value}
-				onChange={onChange}
-				className="search-input"
-			/>
-			<i className="fas fa-search search-icon"></i>
-		</div>
-	);
+export default function SearchBar({
+  value,
+  onChange,
+  placeholder = 'Cari data…',
+}) {
+  const id = useId();
+  return (
+    <div className="admin-search">
+      <label className="sr-only" htmlFor={id}>
+        Cari data
+      </label>
+      <Search size={17} aria-hidden="true" />
+      <input
+        id={id}
+        type="search"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+      />
+    </div>
+  );
 }
-
-SearchBar.propTypes = {
-	value: PropTypes.string.isRequired,
-	onChange: PropTypes.func.isRequired,
-	placeholder: PropTypes.string,
-};
