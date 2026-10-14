@@ -11,6 +11,7 @@ Baseline: branch `staging`, commit `845aedb3ddb5b79979d26d58fdcce840a705ee17`. I
 - Perbaikan kontrak rekening, field detail life goal, tahun transaksi, pengurutan nominal/tanggal, pagination, deep links, dan status pembayaran.
 - CSV dengan quoting dan mitigasi formula injection; PDF memakai data tagihan sebenarnya, mendukung halaman tabel lanjutan, dan dimuat saat diminta.
 - UI admin menggunakan izin menu API dan penugasan workflow; tidak memberikan fallback izin saat API gagal.
+- Artefak node_modules yang sebelumnya tertrack dikeluarkan dari Git; dependensi dipulihkan melalui lockfile.
 - Node 24, lockfile sinkron, test/format/lint wajib di CI, serta pembatasan deployment ke push staging.
 - Image Nginx dengan SPA fallback, same-origin API proxy, cache aset, dan header keamanan.
 
